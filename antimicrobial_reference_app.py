@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="Antimicrobial Stewardship", layout="wide", page_icon="🧫")
+st.set_page_config(page_title="Antimicrobial Stewardship App", layout="wide", page_icon="🧫")
 
 # ---------------------------------------------------------------------------
 # SESSION STATE
@@ -13,8 +13,8 @@ if "history" not in st.session_state:
     st.session_state.history = []
 if "pcn_allergy" not in st.session_state:
     st.session_state.pcn_allergy = False
-if "compare_mode" not in st.session_state:
-    st.session_state.compare_mode = False
+if "view_mode" not in st.session_state:
+    st.session_state.view_mode = "🔍 Drug Lookup"
 
 # ---------------------------------------------------------------------------
 # LIGHTWEIGHT STYLING (badge pills used for the "quick facts" row)
@@ -51,6 +51,7 @@ ANTIMICROBIALS = {
     "amoxicillin": {
         "generic": "Amoxicillin", "brand": "Amoxil",
         "drug_class": "Aminopenicillin (Penicillin)",
+        "aware": "Access",
         "mechanism": "Beta-lactam; inhibits cell wall synthesis (penicillin class, bactericidal).",
         "spectrum": "✅ Gram-positive (Strep, Enterococcus). ✅ Limited Gram-negative (E. coli, H. influenzae). ❌ No anaerobes.",
         "coverage": ["Gram-positive", "Gram-negative (limited)"],
@@ -68,6 +69,7 @@ ANTIMICROBIALS = {
     "azithromycin": {
         "generic": "Azithromycin", "brand": "Zithromax",
         "drug_class": "Macrolide",
+        "aware": "Watch",
         "mechanism": "Macrolide; binds 50S ribosome, inhibits protein synthesis (bacteriostatic).",
         "spectrum": "✅ Gram-positive (Strep, Staph). ✅ Atypicals (Chlamydia, Mycoplasma). ✅ Some Gram-negative (H. flu).",
         "coverage": ["Gram-positive", "Atypicals", "Gram-negative (limited)"],
@@ -85,6 +87,7 @@ ANTIMICROBIALS = {
     "ciprofloxacin": {
         "generic": "Ciprofloxacin", "brand": "Cipro",
         "drug_class": "Fluoroquinolone",
+        "aware": "Watch",
         "mechanism": "Fluoroquinolone; inhibits DNA gyrase (topoisomerase II), bactericidal.",
         "spectrum": "✅ Strong Gram-negative (Pseudomonas, Enterobacter, E. coli). ⚠️ Moderate Gram-positive (Staph). ❌ No anaerobes.",
         "coverage": ["Gram-negative", "Pseudomonas", "Gram-positive (moderate)"],
@@ -102,6 +105,7 @@ ANTIMICROBIALS = {
     "doxycycline": {
         "generic": "Doxycycline", "brand": "Vibramycin",
         "drug_class": "Tetracycline",
+        "aware": "Access",
         "mechanism": "Tetracycline; binds 30S ribosome, inhibits protein synthesis (bacteriostatic).",
         "spectrum": "✅ Atypicals (Chlamydia, Mycoplasma, Rickettsia). ✅ MRSA (some). ✅ Gram-negative (some).",
         "coverage": ["Atypicals", "MRSA (some)", "Gram-negative (limited)"],
@@ -119,6 +123,7 @@ ANTIMICROBIALS = {
     "metronidazole": {
         "generic": "Metronidazole", "brand": "Flagyl",
         "drug_class": "Nitroimidazole",
+        "aware": "Access",
         "mechanism": "Nitroimidazole; disrupts DNA and protein synthesis in anaerobes (bactericidal).",
         "spectrum": "✅ Excellent anaerobes (Bacteroides, Clostridium). ✅ Some protozoa (Trichomonas, Giardia). ❌ No aerobes.",
         "coverage": ["Anaerobes", "Protozoa"],
@@ -136,6 +141,7 @@ ANTIMICROBIALS = {
     "vancomycin": {
         "generic": "Vancomycin", "brand": "Vancocin",
         "drug_class": "Glycopeptide",
+        "aware": "Watch",
         "mechanism": "Glycopeptide; inhibits cell wall synthesis (bactericidal).",
         "spectrum": "✅ MRSA (strong). ✅ Gram-positive (Strep, Enterococcus). ❌ No Gram-negative.",
         "coverage": ["MRSA", "Gram-positive"],
@@ -153,6 +159,7 @@ ANTIMICROBIALS = {
     "ceftriaxone": {
         "generic": "Ceftriaxone", "brand": "Rocephin",
         "drug_class": "Cephalosporin (3rd gen)",
+        "aware": "Watch",
         "mechanism": "3rd generation cephalosporin; inhibits cell wall synthesis (bactericidal).",
         "spectrum": "✅ Broad Gram-negative (Neisseria, E. coli, Klebsiella). ✅ Moderate Gram-positive (Strep). ❌ No anaerobes.",
         "coverage": ["Gram-negative", "Gram-positive (moderate)"],
@@ -170,6 +177,7 @@ ANTIMICROBIALS = {
     "gentamicin": {
         "generic": "Gentamicin", "brand": "Generic",
         "drug_class": "Aminoglycoside",
+        "aware": "Access",
         "mechanism": "Aminoglycoside; binds 30S ribosome, inhibits protein synthesis (bactericidal, concentration-dependent).",
         "spectrum": "✅ Strong Gram-negative (Pseudomonas, E. coli, Enterobacter). ✅ Synergy with beta-lactams for Enterococcus. ❌ No anaerobes.",
         "coverage": ["Gram-negative", "Pseudomonas", "Enterococcus (synergy)"],
@@ -187,6 +195,7 @@ ANTIMICROBIALS = {
     "piperacillin_tazobactam": {
         "generic": "Piperacillin-Tazobactam", "brand": "Zosyn",
         "drug_class": "Beta-lactam/Beta-lactamase inhibitor",
+        "aware": "Watch",
         "mechanism": "Penicillin + beta-lactamase inhibitor; inhibits cell wall synthesis (bactericidal).",
         "spectrum": "✅ Broad: Gram-positive, Gram-negative (including Pseudomonas), and Anaerobes (Bacteroides).",
         "coverage": ["Gram-positive", "Gram-negative", "Pseudomonas", "Anaerobes"],
@@ -204,6 +213,7 @@ ANTIMICROBIALS = {
     "clindamycin": {
         "generic": "Clindamycin", "brand": "Cleocin",
         "drug_class": "Lincosamide",
+        "aware": "Access",
         "mechanism": "Lincosamide; binds 50S ribosome, inhibits protein synthesis (bacteriostatic).",
         "spectrum": "✅ Gram-positive (Strep, Staph, including some MRSA). ✅ Excellent anaerobes (Bacteroides, Clostridium). ❌ No Gram-negative.",
         "coverage": ["Gram-positive", "MRSA (some)", "Anaerobes"],
@@ -221,6 +231,7 @@ ANTIMICROBIALS = {
     "sulfamethoxazole_trimethoprim": {
         "generic": "Sulfamethoxazole-Trimethoprim", "brand": "Bactrim",
         "drug_class": "Sulfonamide combination",
+        "aware": "Access",
         "mechanism": "Sequential blockade of bacterial folate synthesis (sulfamethoxazole inhibits dihydropteroate synthase, trimethoprim inhibits dihydrofolate reductase); synergistic and bactericidal.",
         "spectrum": "✅ MRSA (good). ✅ Gram-negative (E. coli, Proteus). ✅ Pneumocystis jirovecii. ❌ Pseudomonas. ❌ Most anaerobes.",
         "coverage": ["MRSA", "Gram-negative", "Atypicals (PJP)"],
@@ -238,6 +249,7 @@ ANTIMICROBIALS = {
     "linezolid": {
         "generic": "Linezolid", "brand": "Zyvox",
         "drug_class": "Oxazolidinone",
+        "aware": "Reserve",
         "mechanism": "Binds the 23S rRNA of the 50S ribosomal subunit, blocking initiation of protein synthesis (bacteriostatic).",
         "spectrum": "✅ MRSA (excellent). ✅ VRE (excellent — one of few oral options). ✅ Gram-positive. ❌ No Gram-negative.",
         "coverage": ["MRSA", "VRE", "Gram-positive"],
@@ -251,6 +263,258 @@ ANTIMICROBIALS = {
         "dosing_peds": "10 mg/kg/dose PO/IV q8h (Max 600 mg/dose).",
         "dosing_renal": "No adjustment needed (hepatic metabolism); active metabolites can accumulate in severe renal impairment — monitor.",
         "pharmacist_notes": "🚨 Weak MAOI — serotonin syndrome risk with SSRIs/SNRIs/MAOIs/triptans; avoid or use extreme caution. 🩸 Baseline + weekly CBC if course exceeds 2 weeks.",
+    },
+    "penicillin_vk": {
+        "generic": "Penicillin V", "brand": "Pen-Vee K",
+        "drug_class": "Natural penicillin",
+        "aware": "Access",
+        "mechanism": "Beta-lactam; inhibits cell wall synthesis (narrow-spectrum penicillin, bactericidal).",
+        "spectrum": "✅ Strep species (excellent). ✅ Oral anaerobes. ❌ No Staph (penicillinase), no Gram-negative.",
+        "coverage": ["Gram-positive", "Anaerobes (oral)"],
+        "indications": "Strep pharyngitis, rheumatic fever prophylaxis, dental infections, mild skin infections.",
+        "side_effects": "Diarrhea, nausea, rash. Anaphylaxis in true PCN allergy (highest-risk beta-lactam for skin testing reference).",
+        "pregnancy": "Category B. Considered safe.",
+        "cross_allergy": "⚠️ The reference penicillin — defines \"PCN allergy.\" Cross-reacts with other penicillins; low cross-reactivity with cephalosporins.",
+        "bioavailability": "Oral: ~60-70% (food reduces absorption). Protein binding: ~80%.",
+        "max_duration": "Strep pharyngitis: 10 days. RF prophylaxis: years (often through age 21+).",
+        "dosing_adults": "250-500 mg PO q6h.",
+        "dosing_peds": "25-50 mg/kg/day PO divided q6-8h (Max per adult dosing).",
+        "dosing_renal": "CrCl <10: Extend interval to q8h.",
+        "pharmacist_notes": "☕ Take on empty stomach (1h before/2h after meals) for best absorption. ✅ First-line, narrow-spectrum choice for strep pharyngitis per IDSA — favor over broader agents when susceptible.",
+    },
+    "ampicillin_sulbactam": {
+        "generic": "Ampicillin-Sulbactam", "brand": "Unasyn",
+        "drug_class": "Beta-lactam/Beta-lactamase inhibitor",
+        "aware": "Access",
+        "mechanism": "Aminopenicillin + beta-lactamase inhibitor; inhibits cell wall synthesis (bactericidal).",
+        "spectrum": "✅ Gram-positive. ✅ Gram-negative (beta-lactamase producing H. flu, some E. coli). ✅ Oral/intra-abdominal anaerobes. ❌ No Pseudomonas.",
+        "coverage": ["Gram-positive", "Gram-negative (limited)", "Anaerobes"],
+        "indications": "Aspiration pneumonia, intra-abdominal infections, diabetic foot infections, human/animal bites, pelvic infections.",
+        "side_effects": "Diarrhea, rash, C. diff risk.",
+        "pregnancy": "Category B. Generally safe.",
+        "cross_allergy": "⚠️ Penicillin-class. Avoid if severe PCN anaphylaxis.",
+        "bioavailability": "IV/IM only. Protein binding: ~28-38%.",
+        "max_duration": "5-14 days depending on source control.",
+        "dosing_adults": "1.5-3 g IV q6h (max 4 g/day of sulbactam component).",
+        "dosing_peds": "100-200 mg/kg/day (ampicillin component) IV divided q6h.",
+        "dosing_renal": "CrCl 15-29: 1.5-3 g q12h. CrCl 5-14: 1.5-3 g q24h.",
+        "pharmacist_notes": "✅ A go-to Access-category choice for aspiration/bite-wound coverage before reaching for broader Watch-category agents like Zosyn.",
+    },
+    "amoxicillin_clavulanate": {
+        "generic": "Amoxicillin-Clavulanate", "brand": "Augmentin",
+        "drug_class": "Beta-lactam/Beta-lactamase inhibitor",
+        "aware": "Access",
+        "mechanism": "Aminopenicillin + beta-lactamase inhibitor (clavulanic acid); inhibits cell wall synthesis (bactericidal).",
+        "spectrum": "✅ Gram-positive. ✅ Gram-negative (beta-lactamase-producing H. flu, Moraxella). ✅ Oral anaerobes. ❌ No Pseudomonas.",
+        "coverage": ["Gram-positive", "Gram-negative (limited)", "Anaerobes"],
+        "indications": "Sinusitis, otitis media (beta-lactamase-producing organisms), animal/human bites, diabetic foot infections, CAP.",
+        "side_effects": "Diarrhea (more than amoxicillin alone, due to clavulanate), nausea, rash, rare cholestatic hepatitis.",
+        "pregnancy": "Category B. Generally safe.",
+        "cross_allergy": "⚠️ Penicillin-class. Cross-reacts with cephalosporins (low ~5-10%).",
+        "bioavailability": "Oral: ~80% (amoxicillin component). Protein binding: ~20%/~25%.",
+        "max_duration": "5-10 days depending on indication.",
+        "dosing_adults": "875/125 mg PO q12h OR 500/125 mg PO q8h.",
+        "dosing_peds": "45-90 mg/kg/day (amoxicillin component) PO divided q12h.",
+        "dosing_renal": "CrCl 10-30: 500/125 mg q12h. CrCl <10: 500/125 mg q24h.",
+        "pharmacist_notes": "☕ Take with food to reduce GI upset. ✅ Use the formulation with the lowest clavulanate ratio available (e.g., 875/125 over 500/125 dosed more frequently) to limit diarrhea.",
+    },
+    "cephalexin": {
+        "generic": "Cephalexin", "brand": "Keflex",
+        "drug_class": "Cephalosporin (1st gen)",
+        "aware": "Access",
+        "mechanism": "1st generation cephalosporin; inhibits cell wall synthesis (bactericidal).",
+        "spectrum": "✅ Gram-positive (Strep, MSSA). ✅ Limited Gram-negative (E. coli, Klebsiella, Proteus). ❌ No MRSA, no Pseudomonas, no anaerobes.",
+        "coverage": ["Gram-positive", "Gram-negative (limited)"],
+        "indications": "Uncomplicated skin/soft tissue infections (non-MRSA), uncomplicated cystitis, strep pharyngitis (PCN-allergic, non-anaphylactic).",
+        "side_effects": "Diarrhea, nausea, rash. C. diff risk (lower than broader cephalosporins).",
+        "pregnancy": "Category B. Generally safe.",
+        "cross_allergy": "⚠️ Cross-reacts with penicillins (~1-5%, low). Avoid if severe PCN anaphylaxis.",
+        "bioavailability": "Oral: ~90%. Protein binding: ~10-15%.",
+        "max_duration": "5-7 days (skin/soft tissue); 3-7 days (UTI).",
+        "dosing_adults": "250-500 mg PO q6h (or 500 mg q12h for skin infections).",
+        "dosing_peds": "25-50 mg/kg/day PO divided q6-8h (Max 4 g/day).",
+        "dosing_renal": "CrCl 10-30: q8-12h. CrCl <10: q12-24h.",
+        "pharmacist_notes": "✅ First-line, narrow oral option for uncomplicated non-MRSA skin infections — add doxycycline/TMP-SMX/clindamycin instead (not on top of) if MRSA is a concern.",
+    },
+    "cefazolin": {
+        "generic": "Cefazolin", "brand": "Ancef",
+        "drug_class": "Cephalosporin (1st gen)",
+        "aware": "Access",
+        "mechanism": "1st generation cephalosporin; inhibits cell wall synthesis (bactericidal).",
+        "spectrum": "✅ Gram-positive (Strep, MSSA — drug of choice for MSSA bacteremia). ✅ Limited Gram-negative. ❌ No MRSA, no Pseudomonas.",
+        "coverage": ["Gram-positive", "Gram-negative (limited)"],
+        "indications": "Surgical prophylaxis (workhorse agent), MSSA bacteremia/endocarditis, uncomplicated cellulitis.",
+        "side_effects": "Diarrhea, rash, phlebitis at infusion site.",
+        "pregnancy": "Category B. Generally safe.",
+        "cross_allergy": "⚠️ Cross-reacts with penicillins (~1-5%, low). Often tolerated even with non-anaphylactic PCN allergy.",
+        "bioavailability": "IV/IM only. Protein binding: ~75-85%.",
+        "max_duration": "Surgical ppx: single pre-op dose (± redose intraop). MSSA bacteremia: 2+ weeks per source.",
+        "dosing_adults": "1-2 g IV q8h (Surgical prophylaxis: 2 g IV within 60 min pre-incision, redose q4h intraop).",
+        "dosing_peds": "50-100 mg/kg/day IV divided q8h (Max 6 g/day).",
+        "dosing_renal": "CrCl 35-54: no change usually. CrCl 11-34: q12h. CrCl <10: q18-24h.",
+        "pharmacist_notes": "✅ Preferred agent for MSSA bacteremia over vancomycin when the organism is susceptible — better outcomes data. The default surgical prophylaxis cephalosporin.",
+    },
+    "cefepime": {
+        "generic": "Cefepime", "brand": "Maxipime",
+        "drug_class": "Cephalosporin (4th gen)",
+        "aware": "Watch",
+        "mechanism": "4th generation cephalosporin; inhibits cell wall synthesis (bactericidal).",
+        "spectrum": "✅ Broad Gram-negative including Pseudomonas. ✅ Gram-positive (Strep, MSSA). ❌ No MRSA, no anaerobes, no Enterococcus.",
+        "coverage": ["Gram-negative", "Pseudomonas", "Gram-positive (moderate)"],
+        "indications": "Febrile neutropenia, healthcare-associated/hospital-acquired pneumonia, complicated UTI, empiric Pseudomonas coverage.",
+        "side_effects": "⚠️ Neurotoxicity (encephalopathy, myoclonus, seizures) — especially with renal impairment/inadequate dose reduction. Diarrhea, rash.",
+        "pregnancy": "Category B. Generally safe.",
+        "cross_allergy": "⚠️ Cross-reacts with penicillins (~1-5%, low). Avoid if severe PCN anaphylaxis.",
+        "bioavailability": "IV/IM only. Protein binding: ~20%.",
+        "max_duration": "7-14 days depending on source; febrile neutropenia per ANC recovery.",
+        "dosing_adults": "1-2 g IV q8-12h (higher dose/frequency for Pseudomonas or CNS infection).",
+        "dosing_peds": "50 mg/kg/dose IV q8-12h (Max 2 g/dose).",
+        "dosing_renal": "⛔ CRITICAL — neurotoxicity risk if not adjusted. CrCl 30-60: 2 g q12h. CrCl 11-29: 2 g q24h. CrCl <11: 1 g q24h.",
+        "pharmacist_notes": "🚨 Renally adjust promptly and monitor mental status — cefepime neurotoxicity is under-recognized and often mistaken for other causes of delirium in the renally impaired.",
+    },
+    "ceftazidime": {
+        "generic": "Ceftazidime", "brand": "Fortaz",
+        "drug_class": "Cephalosporin (3rd gen, antipseudomonal)",
+        "aware": "Watch",
+        "mechanism": "3rd generation cephalosporin with antipseudomonal activity; inhibits cell wall synthesis (bactericidal).",
+        "spectrum": "✅ Strong Gram-negative including Pseudomonas. ⚠️ Weak Gram-positive (poor Strep/Staph coverage). ❌ No anaerobes.",
+        "coverage": ["Gram-negative", "Pseudomonas"],
+        "indications": "Pseudomonas infections, hospital-acquired pneumonia, complicated UTI/intra-abdominal (with anaerobic coverage added), febrile neutropenia.",
+        "side_effects": "Diarrhea, rash, eosinophilia. Neurotoxicity at high doses with renal impairment.",
+        "pregnancy": "Category B. Generally safe.",
+        "cross_allergy": "⚠️ Cross-reacts with penicillins (~1-5%, low). Avoid if severe PCN anaphylaxis.",
+        "bioavailability": "IV/IM only. Protein binding: ~10%.",
+        "max_duration": "7-14 days depending on source.",
+        "dosing_adults": "1-2 g IV q8h.",
+        "dosing_peds": "30-50 mg/kg/dose IV q8h (Max 6 g/day).",
+        "dosing_renal": "CrCl 31-50: q12h. CrCl 16-30: q24h. CrCl <15: q24-48h.",
+        "pharmacist_notes": "⚠️ Poor Gram-positive coverage — add MRSA/Strep coverage separately when needed. Reserve for confirmed/suspected Pseudomonas rather than routine empiric use.",
+    },
+    "meropenem": {
+        "generic": "Meropenem", "brand": "Merrem",
+        "drug_class": "Carbapenem",
+        "aware": "Watch",
+        "mechanism": "Carbapenem; inhibits cell wall synthesis (bactericidal, very broad spectrum).",
+        "spectrum": "✅ Broad Gram-positive, Gram-negative (including Pseudomonas, ESBL producers), and Anaerobes. ❌ No MRSA, no VRE, no atypicals.",
+        "coverage": ["Gram-positive", "Gram-negative", "Pseudomonas", "Anaerobes"],
+        "indications": "Severe/polymicrobial infections, ESBL-producing organism infections, meningitis, febrile neutropenia (broad empiric coverage).",
+        "side_effects": "Diarrhea, rash, seizures (higher risk than other carbapenems, especially with renal impairment/high dose), C. diff risk.",
+        "pregnancy": "Category B. Use if clearly needed.",
+        "cross_allergy": "Low cross-reactivity with penicillins (~1%); generally tolerated even in PCN allergy, but caution if anaphylaxis history.",
+        "bioavailability": "IV only. Protein binding: ~2%.",
+        "max_duration": "7-14 days depending on source; meningitis up to 21 days.",
+        "dosing_adults": "1 g IV q8h (Meningitis/CNS: 2 g IV q8h).",
+        "dosing_peds": "20 mg/kg/dose IV q8h (Meningitis: 40 mg/kg/dose q8h, Max 2 g/dose).",
+        "dosing_renal": "CrCl 26-50: 1 g q12h. CrCl 10-25: 500 mg q12h. CrCl <10: 500 mg q24h.",
+        "pharmacist_notes": "🚨 A \"Watch\"-category carbapenem — reserve for ESBL/polymicrobial/severe infections rather than routine empiric broad coverage; involve stewardship/ID for prolonged use. Extended infusion improves target attainment in critical illness.",
+    },
+    "ertapenem": {
+        "generic": "Ertapenem", "brand": "Invanz",
+        "drug_class": "Carbapenem",
+        "aware": "Watch",
+        "mechanism": "Carbapenem; inhibits cell wall synthesis (bactericidal). Unlike other carbapenems, no reliable Pseudomonas or Enterococcus activity.",
+        "spectrum": "✅ Broad Gram-positive, Gram-negative (including ESBL producers), and Anaerobes. ❌ No Pseudomonas, no Enterococcus, no MRSA.",
+        "coverage": ["Gram-positive", "Gram-negative", "Anaerobes"],
+        "indications": "Complicated intra-abdominal/skin infections, diabetic foot infections, ESBL-producing organism infections — favored for outpatient IV therapy given once-daily dosing.",
+        "side_effects": "Diarrhea, phlebitis (IM associated with pain — often mixed with lidocaine), C. diff risk, seizures (less than meropenem/imipenem).",
+        "pregnancy": "Category B. Use if clearly needed.",
+        "cross_allergy": "Low cross-reactivity with penicillins; generally tolerated even in PCN allergy, but caution if anaphylaxis history.",
+        "bioavailability": "IV/IM only. Protein binding: ~85-95% (concentration-dependent).",
+        "max_duration": "7-14 days depending on source.",
+        "dosing_adults": "1 g IV/IM once daily.",
+        "dosing_peds": "15 mg/kg/dose IV q12h (Max 1 g/day), ages 3 months-12 years.",
+        "dosing_renal": "CrCl ≤30: 500 mg IV/IM once daily.",
+        "pharmacist_notes": "✅ Once-daily dosing makes it a common OPAT (outpatient parenteral antibiotic therapy) choice. 🚫 No Pseudomonas coverage — don't substitute for meropenem/piperacillin-tazobactam when Pseudomonas is a concern.",
+    },
+    "levofloxacin": {
+        "generic": "Levofloxacin", "brand": "Levaquin",
+        "drug_class": "Fluoroquinolone",
+        "aware": "Watch",
+        "mechanism": "Fluoroquinolone; inhibits DNA gyrase/topoisomerase IV, bactericidal.",
+        "spectrum": "✅ Gram-negative (including Pseudomonas at higher dose). ✅ Gram-positive (better Strep pneumoniae coverage than ciprofloxacin — a \"respiratory\" fluoroquinolone). ✅ Atypicals.",
+        "coverage": ["Gram-negative", "Pseudomonas", "Gram-positive (moderate)", "Atypicals"],
+        "indications": "CAP, complicated UTI/pyelonephritis, healthcare-associated pneumonia, TB (second-line).",
+        "side_effects": "⚠️ Tendon rupture, peripheral neuropathy, CNS effects, QT prolongation. Same class warnings as ciprofloxacin.",
+        "pregnancy": "Category C. Avoid in pregnancy/breastfeeding.",
+        "cross_allergy": "No cross-reactivity with PCN.",
+        "bioavailability": "Oral: ~99% (near-complete — IV and PO doses are equivalent).",
+        "max_duration": "CAP: 5 days. Pyelonephritis: 5-7 days.",
+        "dosing_adults": "500-750 mg PO/IV q24h.",
+        "dosing_peds": "Only for specific indications; not first-line in children (arthropathy risk).",
+        "dosing_renal": "CrCl 20-49: 500-750 mg first dose, then q48h. CrCl 10-19: 500-750 mg first dose, then q48h at reduced dose.",
+        "pharmacist_notes": "✅ Near-100% oral bioavailability — IV-to-PO switch is essentially dose-equivalent. ☕ Avoid dairy/antacids/iron/zinc within 2 hours, same as ciprofloxacin.",
+    },
+    "nitrofurantoin": {
+        "generic": "Nitrofurantoin", "brand": "Macrobid",
+        "drug_class": "Nitrofuran",
+        "aware": "Access",
+        "mechanism": "Nitrofuran; damages bacterial DNA/ribosomal proteins via reactive intermediates (bactericidal at urinary concentrations).",
+        "spectrum": "✅ E. coli (excellent, including many resistant strains). ✅ Enterococcus. ❌ Proteus, Pseudomonas (intrinsically resistant). Only concentrates in urine — no systemic use.",
+        "coverage": ["Gram-negative (urinary)", "Gram-positive"],
+        "indications": "Uncomplicated cystitis (first-line per IDSA), UTI prophylaxis (recurrent UTI).",
+        "side_effects": "Nausea, pulmonary toxicity (acute/chronic, with prolonged use), hepatotoxicity (rare), peripheral neuropathy, hemolysis in G6PD deficiency.",
+        "pregnancy": "Category B (avoid at term, 38-42 weeks — neonatal hemolysis risk).",
+        "cross_allergy": "No cross-reactivity with PCN.",
+        "bioavailability": "Oral: ~90% (macrocrystal form slows absorption, reduces GI upset). Protein binding: ~60%.",
+        "max_duration": "Uncomplicated cystitis: 5 days (Macrobid). Prophylaxis: 50-100 mg qhs, long-term.",
+        "dosing_adults": "100 mg PO q12h (Macrobid, macrocrystal). Prophylaxis: 50-100 mg qhs.",
+        "dosing_peds": ">1 month: 5-7 mg/kg/day PO divided q6h (Max 400 mg/day).",
+        "dosing_renal": "🚫 Avoid if CrCl <30 mL/min (or <60 mL/min per some stewardship guidance in older adults) — subtherapeutic urine levels + systemic accumulation/toxicity risk.",
+        "pharmacist_notes": "✅ First-line Access-category agent for uncomplicated cystitis — preferred over fluoroquinolones/broader agents per IDSA guidance. 🚫 Not effective for pyelonephritis or systemic infection (doesn't reach therapeutic tissue/blood levels).",
+    },
+    "daptomycin": {
+        "generic": "Daptomycin", "brand": "Cubicin",
+        "drug_class": "Lipopeptide",
+        "aware": "Reserve",
+        "mechanism": "Cyclic lipopeptide; binds bacterial cell membrane causing rapid depolarization (bactericidal, concentration-dependent).",
+        "spectrum": "✅ MRSA (excellent). ✅ VRE (good). ✅ Gram-positive. ❌ No Gram-negative. 🚫 Inactivated by pulmonary surfactant — NOT for pneumonia.",
+        "coverage": ["MRSA", "VRE", "Gram-positive"],
+        "indications": "Complicated skin/soft tissue infections, MRSA bacteremia/right-sided endocarditis, VRE infections (alternative to linezolid).",
+        "side_effects": "⚠️ CPK elevation, myopathy/rhabdomyolysis, eosinophilic pneumonia (rare). Injection site reactions.",
+        "pregnancy": "Category B. Use if clearly needed.",
+        "cross_allergy": "No cross-reactivity with PCN.",
+        "bioavailability": "IV only. Protein binding: ~92%.",
+        "max_duration": "SSTI: 7-14 days. Bacteremia/endocarditis: 4-6+ weeks.",
+        "dosing_adults": "4 mg/kg IV q24h (SSTI). 6-10 mg/kg IV q24h (bacteremia/endocarditis, higher end increasingly favored).",
+        "dosing_peds": "Specialist-guided dosing; not well established <1 year.",
+        "dosing_renal": "CrCl <30: extend interval to q48h.",
+        "pharmacist_notes": "🚫 DO NOT use for pneumonia — inactivated by lung surfactant. 🩸 Baseline + weekly CPK monitoring (more frequent if on a statin or renally impaired). A Reserve-category agent — typically an ID/stewardship-guided choice.",
+    },
+    "aztreonam": {
+        "generic": "Aztreonam", "brand": "Azactam",
+        "drug_class": "Monobactam",
+        "aware": "Reserve",
+        "mechanism": "Monobactam; inhibits cell wall synthesis (bactericidal). Structurally distinct beta-lactam ring — minimal cross-reactivity with penicillins/cephalosporins.",
+        "spectrum": "✅ Gram-negative only (including Pseudomonas). ❌ No Gram-positive, no anaerobes.",
+        "coverage": ["Gram-negative", "Pseudomonas"],
+        "indications": "Gram-negative infections (including Pseudomonas) in patients with severe beta-lactam allergy — its main clinical niche.",
+        "side_effects": "Diarrhea, rash, elevated LFTs. Generally well tolerated.",
+        "pregnancy": "Category B. Generally safe.",
+        "cross_allergy": "✅ Minimal cross-reactivity with penicillins/cephalosporins (shares a side chain with ceftazidime only) — the go-to Gram-negative option in severe PCN/cephalosporin anaphylaxis.",
+        "bioavailability": "IV/IM only. Protein binding: ~56%.",
+        "max_duration": "7-14 days depending on source.",
+        "dosing_adults": "1-2 g IV q8-12h (moderate infection); 2 g IV q6-8h (severe, max 8 g/day).",
+        "dosing_peds": "30 mg/kg/dose IV q6-8h (Max 120 mg/kg/day).",
+        "dosing_renal": "CrCl 10-30: 50% of usual dose. CrCl <10: 25% of usual dose (after a normal loading dose).",
+        "pharmacist_notes": "✅ Key safety niche: one of the few Gram-negative options that's safe in true PCN/cephalosporin anaphylaxis (except shares cross-reactivity with ceftazidime specifically). No Gram-positive or anaerobic coverage — must be paired with another agent if needed.",
+    },
+    "rifampin": {
+        "generic": "Rifampin", "brand": "Rifadin",
+        "drug_class": "Rifamycin",
+        "aware": "Not AWaRe-classified for general use (WHO classifies rifamycins primarily under its TB-specific guidance)",
+        "mechanism": "Rifamycin; inhibits bacterial DNA-dependent RNA polymerase (bactericidal). Excellent biofilm/intracellular penetration.",
+        "spectrum": "✅ Staph (including MRSA, as an adjunct only — never monotherapy, resistance emerges rapidly). ✅ Mycobacteria (TB). ✅ Some Gram-positive.",
+        "coverage": ["Gram-positive", "Biofilm/intracellular adjunct"],
+        "indications": "Adjunct for prosthetic joint/device infections and endocarditis with Staph (biofilm penetration), tuberculosis (first-line, with other agents), Neisseria meningitidis prophylaxis.",
+        "side_effects": "Orange discoloration of body fluids (harmless), hepatotoxicity, flu-like reaction, potent CYP450 induction (major drug interaction risk).",
+        "pregnancy": "Category C. Use if benefit outweighs risk (standard component of TB treatment in pregnancy).",
+        "cross_allergy": "No cross-reactivity with PCN.",
+        "bioavailability": "Oral: ~90-95%. Protein binding: ~80%.",
+        "max_duration": "TB: 6+ months (per regimen). Prosthetic joint infection adjunct: weeks-months per ID guidance.",
+        "dosing_adults": "600 mg PO/IV once daily OR 300-450 mg PO q12h (as an adjunct for Staph biofilm infections).",
+        "dosing_peds": "10-20 mg/kg/day PO/IV divided q12-24h (Max 600 mg/day).",
+        "dosing_renal": "No adjustment typically needed (primarily hepatic elimination).",
+        "pharmacist_notes": "🚨 NEVER use as monotherapy for active bacterial infection — resistance develops within days; always pair with another active agent. 🚨 Potent CYP3A4/CYP2C9 inducer — screen for interactions (warfarin, oral contraceptives, antiretrovirals, azoles, statins, etc.) before every course.",
     },
 }
 
@@ -268,11 +532,42 @@ BRAND_MAP = {
     "bactrim": "sulfamethoxazole_trimethoprim",
     "septra": "sulfamethoxazole_trimethoprim",
     "zyvox": "linezolid",
+    "pen-vee k": "penicillin_vk",
+    "penicillin vk": "penicillin_vk",
+    "unasyn": "ampicillin_sulbactam",
+    "augmentin": "amoxicillin_clavulanate",
+    "keflex": "cephalexin",
+    "ancef": "cefazolin",
+    "maxipime": "cefepime",
+    "fortaz": "ceftazidime",
+    "merrem": "meropenem",
+    "invanz": "ertapenem",
+    "levaquin": "levofloxacin",
+    "macrobid": "nitrofurantoin",
+    "macrodantin": "nitrofurantoin",
+    "cubicin": "daptomycin",
+    "azactam": "aztreonam",
+    "rifadin": "rifampin",
 }
 
 ALL_CLASSES = sorted({d["drug_class"] for d in ANTIMICROBIALS.values()})
 ALL_COVERAGE = sorted({tag for d in ANTIMICROBIALS.values() for tag in d["coverage"]})
 KEY_BY_LABEL = {f"{d['generic']} ({d['brand']})": k for k, d in ANTIMICROBIALS.items()}
+
+# WHO AWaRe (Access/Watch/Reserve) classification. "Access"/"Watch"/"Reserve" are the three
+# canonical categories from WHO's AWaRe antibiotic list (https://aware.essentialmeds.org/).
+# A handful of agents (e.g. rifampin here) aren't part of WHO's general bacterial-infection
+# AWaRe list and carry an explanatory string instead — aware_category() normalizes that to
+# a clean "Not classified" state everywhere it's displayed or filtered on.
+AWARE_TONE = {"Access": "green", "Watch": "yellow", "Reserve": "red"}
+
+
+def aware_category(data):
+    val = data.get("aware", "")
+    return val if val in AWARE_TONE else None
+
+
+ALL_AWARE = ["Access", "Watch", "Reserve"]
 
 FIELD_LABELS = [
     ("drug_class", "Drug class"),
@@ -315,7 +610,8 @@ def jump_to_drug(display_name):
     rendered in the same pass raises StreamlitWidgetAlreadyInstantiatedError)."""
     st.session_state.filter_classes = []
     st.session_state.filter_coverage = []
-    st.session_state.compare_mode = False
+    st.session_state.filter_aware = []
+    st.session_state.view_mode = "🔍 Drug Lookup"
     st.session_state.drug_select = KEY_BY_LABEL.get(display_name)
 
 
@@ -434,7 +730,13 @@ def quick_facts_row(data):
     else:
         allergy = badge("No PCN cross-reactivity", "green")
 
-    st.markdown(activity + renal + pregnancy + allergy, unsafe_allow_html=True)
+    cat = aware_category(data)
+    if cat:
+        aware_badge = badge(f"WHO AWaRe: {cat}", AWARE_TONE[cat])
+    else:
+        aware_badge = badge("WHO AWaRe: not classified", "grey")
+
+    st.markdown(activity + renal + pregnancy + allergy + aware_badge, unsafe_allow_html=True)
 
 
 def build_summary_text(key, data):
@@ -442,7 +744,7 @@ def build_summary_text(key, data):
     for field, label in FIELD_LABELS:
         lines.append(f"{label}: {data.get(field, 'N/A')}")
     lines.append("")
-    lines.append("Generated by the Antimicrobial Prescribing Reference tool.")
+    lines.append("Generated by the Antimicrobial Stewardship App.")
     lines.append("Verify against institutional protocols and full prescribing information before clinical use.")
     return "\n".join(lines)
 
@@ -528,17 +830,130 @@ def render_crcl_calculator(key_prefix=""):
         st.caption("Cockcroft-Gault uses actual body weight here; consider ideal/adjusted body weight for obese patients per institutional policy.")
 
 
+def render_stewardship_guidance():
+    st.subheader("📚 Antimicrobial Stewardship — Guidance Summary")
+    st.caption(
+        "A condensed summary of the frameworks referenced throughout this app, drawn from WHO, "
+        "CDC, and AHRQ publications. This is an educational summary, not a reproduction of the "
+        "source documents — read the linked originals for full detail before building policy on them."
+    )
+
+    tab_aware, tab_core, tab_moments = st.tabs([
+        "🎯 WHO AWaRe", "🏥 CDC Core Elements", "⏱️ 4 Moments Framework",
+    ])
+
+    with tab_aware:
+        st.markdown(
+            "The WHO **AWaRe** classification sorts antibiotics into three groups to guide "
+            "empiric choice and monitor overuse of broad-spectrum/last-resort agents:"
+        )
+        st.markdown(
+            badge("Access", "green") +
+            " First-choice, narrow-spectrum agents with lower resistance potential — the agents "
+            "that should cover most common infections empirically.",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            badge("Watch", "yellow") +
+            " Broader-spectrum agents with higher resistance potential — appropriate for more "
+            "severe presentations or specific indications, but shouldn't be reflexive first-line choices.",
+            unsafe_allow_html=True,
+        )
+        st.markdown(
+            badge("Reserve", "red") +
+            " Last-resort agents for confirmed or strongly suspected multidrug-resistant "
+            "organisms — WHO recommends these be guided by infectious disease/stewardship input "
+            "and tracked closely at the facility level.",
+            unsafe_allow_html=True,
+        )
+        st.divider()
+        st.markdown("**This app's curated database, by AWaRe category:**")
+        counts = {cat: 0 for cat in ALL_AWARE}
+        not_classified = []
+        for k, d in ANTIMICROBIALS.items():
+            cat = aware_category(d)
+            if cat:
+                counts[cat] += 1
+            else:
+                not_classified.append(d["generic"])
+        cols = st.columns(len(ALL_AWARE) + 1)
+        for col, cat in zip(cols, ALL_AWARE):
+            col.metric(cat, counts[cat])
+        cols[-1].metric("Not classified", len(not_classified))
+        if not_classified:
+            st.caption(f"Not part of WHO's general AWaRe list: {', '.join(not_classified)}.")
+        st.caption(
+            "A stewardship goal used by many programs (echoing WHO's 2023 target) is that the "
+            "large majority of empiric antibiotic use — commonly cited around 70% — should fall "
+            "in the Access category. Use the sidebar's AWaRe filter to browse each group."
+        )
+
+    with tab_core:
+        st.markdown(
+            "CDC's **Core Elements** framework (hospital and outpatient versions) gives "
+            "stewardship programs a common structure. Both settings now share the same seven elements:"
+        )
+        core_elements = [
+            ("1. Leadership Commitment", "Dedicate the human, financial, and IT resources needed, with visible senior leadership support."),
+            ("2. Accountability", "Name a leader (or co-leaders, e.g. a physician and pharmacist) responsible for program outcomes."),
+            ("3. Pharmacy Expertise / Setting-specific Expertise", "Pair stewardship expertise with clinical expertise relevant to the care setting."),
+            ("4. Action", "Implement concrete interventions — prospective audit and feedback, preauthorization, clinical decision support, treatment guidelines."),
+            ("5. Tracking", "Monitor prescribing patterns, intervention impact, and outcomes like C. difficile rates and resistance trends."),
+            ("6. Reporting", "Regularly share prescribing and outcome data with prescribers, pharmacy, nursing, and leadership."),
+            ("7. Education", "Train prescribers, pharmacy staff, nurses, and patients — most effective paired with active interventions, not alone."),
+        ]
+        for title, desc in core_elements:
+            st.markdown(f"**{title}**")
+            st.write(desc)
+        st.caption(
+            "Source: CDC Core Elements of Hospital Antibiotic Stewardship Programs and Core "
+            "Elements of Outpatient Antibiotic Stewardship (links below)."
+        )
+
+    with tab_moments:
+        st.markdown(
+            "AHRQ's **Four Moments of Antibiotic Decision Making** is a bedside framework for "
+            "prescribers to talk through at each stage of a patient's antibiotic course:"
+        )
+        moments = [
+            ("Moment 1", "Does this patient have an infection that requires antibiotics?"),
+            ("Moment 2", "Have I ordered appropriate cultures before starting antibiotics? What empiric therapy should I initiate?"),
+            ("Moment 3", "A day or more has passed. Can I stop antibiotics? Can I narrow therapy? Can I change from IV to oral therapy?"),
+            ("Moment 4", "What duration of antibiotic therapy is needed for my patient's diagnosis?"),
+        ]
+        for title, desc in moments:
+            st.info(f"**{title}** — {desc}")
+        st.caption("Source: AHRQ Safety Program for Improving Antibiotic Use (link below).")
+
+    st.divider()
+    st.markdown("**Sources**")
+    st.markdown(
+        "- [WHO AWaRe antibiotic classification](https://aware.essentialmeds.org/)\n"
+        "- [CDC — Core Elements of Hospital Antibiotic Stewardship Programs](https://www.cdc.gov/antibiotic-use/hcp/core-elements/hospital.html)\n"
+        "- [CDC — Core Elements of Outpatient Antibiotic Stewardship](https://www.cdc.gov/antibiotic-use/media/pdfs/Core-Elements-Outpatient-508.pdf)\n"
+        "- [AHRQ — Four Moments of Antibiotic Decision Making](https://www.ahrq.gov/antibiotic-use/acute-care/four-moments/index.html)"
+    )
+
+
 # ---------------------------------------------------------------------------
 # SIDEBAR — controls (rendered before the main content depends on them)
 # ---------------------------------------------------------------------------
 with st.sidebar:
+    st.radio(
+        "View",
+        ["🔍 Drug Lookup", "🆚 Compare Two Drugs", "📚 Stewardship Guidance"],
+        key="view_mode",
+    )
     st.checkbox("⚠️ Patient has PCN anaphylaxis history", key="pcn_allergy")
-    st.checkbox("🆚 Compare two drugs", key="compare_mode")
 
     st.divider()
     st.subheader("🔎 Filter the drug list")
     filter_classes = st.multiselect("Drug class", ALL_CLASSES, key="filter_classes")
     filter_coverage = st.multiselect("Organism coverage", ALL_COVERAGE, key="filter_coverage")
+    filter_aware = st.multiselect(
+        "WHO AWaRe category", ALL_AWARE, key="filter_aware",
+        help="Access = first-choice, narrow-spectrum. Watch = higher resistance potential, use judiciously. Reserve = last-resort, ID/stewardship-guided.",
+    )
 
 # ---------------------------------------------------------------------------
 # FILTERED OPTION LIST
@@ -549,6 +964,8 @@ def matches_filters(key):
         return False
     if filter_coverage and not any(tag in d["coverage"] for tag in filter_coverage):
         return False
+    if filter_aware and d.get("aware") not in filter_aware:
+        return False
     return True
 
 
@@ -557,18 +974,20 @@ filtered_keys = sorted([k for k in ANTIMICROBIALS if matches_filters(k)], key=la
 # ---------------------------------------------------------------------------
 # MAIN PAGE
 # ---------------------------------------------------------------------------
-st.title("🧫 Antimicrobial Prescribing Reference")
+st.title("🧫 Antimicrobial Stewardship App")
 st.warning(
     "⚠️ **Clinical decision-support reference only.** Verify all dosing and clinical decisions "
     "against institutional protocols, your local antibiogram, and current full prescribing "
     "information before use in patient care."
 )
-st.caption("Search by generic or brand name. Use the sidebar to filter by drug class or organism coverage, flag a PCN allergy, or compare two agents side by side.")
+st.caption("Search by generic or brand name. Use the sidebar to filter by drug class, organism coverage, or WHO AWaRe category, flag a PCN allergy, compare two agents, or read the stewardship guidance summary.")
 
-if not filtered_keys:
+if st.session_state.view_mode == "📚 Stewardship Guidance":
+    render_stewardship_guidance()
+elif not filtered_keys:
     st.info("No curated drugs match the current filters — clear a filter in the sidebar.")
 else:
-    if st.session_state.compare_mode:
+    if st.session_state.view_mode == "🆚 Compare Two Drugs":
         st.subheader("🆚 Compare two drugs")
         c1, c2 = st.columns(2)
         with c1:
@@ -630,7 +1049,7 @@ else:
 
 st.divider()
 st.caption(
-    f"Antimicrobial Prescribing Reference — curated content for teaching/reference purposes. "
+    f"Antimicrobial Stewardship App — curated content for teaching/reference purposes. "
     f"Not a substitute for clinical judgment, institutional guidelines, or an infectious "
     f"disease/antimicrobial stewardship consult. Session started {datetime.now():%Y-%m-%d}."
 )

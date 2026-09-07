@@ -264,7 +264,7 @@ st.caption("Search by generic or brand (e.g., Vancomycin, Zosyn, Bactrim, Cleoci
 
 #user_input = st.text_input("Enter Antimicrobial Name:", placeholder="e.g., Vancomycin, Bactrim, Clindamycin").strip()
 #create searchable dropdown with all drugs
-all_options = sorted(list(ANTIMICROBIALS.keys()) + list(BRAND_MAP.keys()))
+all_options = sorted(list(ANTIMICROBIALS.keys()))
 user_input = st.selectbox(
     "search or select a drug",
     options=all_options,

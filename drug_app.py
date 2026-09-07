@@ -1,5 +1,6 @@
 import streamlit as st
 import requests
+from pandas.core.window import online
 
 st.set_page_config(page_title="Antimicrobial Stewardship", layout="wide")
 
@@ -232,11 +233,16 @@ def fetch_from_openfda(search_term):
 # --- MAIN SEARCH ---
 def get_drug_info(user_input):
     clean = user_input.strip().lower()
-    search_key = BRAND_MAP.get(clean, clean)
+    #search_key = BRAND_MAP.get(clean, clean)
 
-    if search_key in ANTIMICROBIALS:
-        data = ANTIMICROBIALS[search_key].copy()
+    if clean in ANTIMICROBIALS:
+        data = ANTIMICROBIALS[clean].copy()
         data["source"] = "⚡ Curated Local DB"
+        with st.spinner(f"Searching FDA online for '{clean}'..."):
+            online_data = fetch_from_openfda(clean)
+            if online_data:
+                online_data["source"] = "Online FDA"
+                return online_data
         return data
 
     with st.spinner(f"Searching FDA online for '{user_input}'..."):

@@ -262,10 +262,19 @@ with st.sidebar:
 st.title("🧫 Antimicrobial Prescribing Reference")
 st.caption("Search by generic or brand (e.g., Vancomycin, Zosyn, Bactrim, Cleocin)")
 
-user_input = st.text_input("Enter Antimicrobial Name:", placeholder="e.g., Vancomycin, Bactrim, Clindamycin").strip()
-
-if user_input:
-    data = get_drug_info(user_input)
+#user_input = st.text_input("Enter Antimicrobial Name:", placeholder="e.g., Vancomycin, Bactrim, Clindamycin").strip()
+#create searchable dropdown with all drugs
+all_options = sorted(list(ANTIMICROBIALS.keys()) + list(BRAND_MAP.keys()))
+selected = st.selectbox(
+    "search or select a drug",
+    options=all_options,
+    index=None, #No default selection
+    placeholder="Type to search... (e.g., Van, Cipro, Zosyn)"
+)
+if selected:
+    data= get_drug_info(selected)
+#if user_input:
+ #   data = get_drug_info(user_input)
 
     if data:
         display_name = user_input.capitalize()

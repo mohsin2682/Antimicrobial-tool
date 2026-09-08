@@ -1323,7 +1323,7 @@ CEPHALOSPORIN_CLASSES = {"Cephalosporin (3rd gen)"}
 # formulary policy, separate from the WHO AWaRe classification used
 # elsewhere in this app.
 # ---------------------------------------------------------------------------
-GUIDELINE_SOURCE = "an institutional antimicrobial guideline (2nd edition, hospital Antibiotic Stewardship Subcommittee)"
+#GUIDELINE_SOURCE = "an institutional antimicrobial guideline (2nd edition, hospital Antibiotic Stewardship Subcommittee)"
 
 RESTRICTED_ANTIBIOTICS = [
     "Fosfomycin IV", "Tigecycline", "Linezolid IV/PO", "Caspofungin", "Remdesivir",

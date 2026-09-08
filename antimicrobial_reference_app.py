@@ -974,7 +974,7 @@ filtered_keys = sorted([k for k in ANTIMICROBIALS if matches_filters(k)], key=la
 # ---------------------------------------------------------------------------
 # MAIN PAGE
 # ---------------------------------------------------------------------------
-st.title("🧫 Antimicrobial Stewardship App")
+st.title("🧫 RxMicrobe")
 st.warning(
     "⚠️ **Clinical decision-support reference only.** Verify all dosing and clinical decisions "
     "against institutional protocols, your local antibiogram, and current full prescribing "

@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="BUG and drug Spectrum", layout="wide", page_icon="🧫")
+st.set_page_config(page_title="RxMicrobe", layout="wide", page_icon="🧫")
 
 # ---------------------------------------------------------------------------
 # SESSION STATE
